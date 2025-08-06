@@ -109,25 +109,27 @@ def list_experiments():
         print("❌ No experiments found!")
         return
     
+    # Calculate maximum name length for better formatting
+    max_name_length = max(len(exp['name']) for exp in experiments)
+    name_width = max(30, max_name_length + 5)  # Minimum 30, but expand if needed
+    
     print("🔬 EXPERIMENTS FOUND:")
-    print("=" * 80)
+    print("=" * (name_width + 50))
     
     for exp in experiments:
-        print(f"\n📁 {exp['name']}")
+        print(f"\n📁 {exp['name']:<{name_width}}", end="")
         if exp['summary']:
             summary = exp['summary']
-            print(f"   📅 Timestamp: {summary.get('timestamp', 'N/A')}")
-            print(f"   🎯 Final Accuracy: {summary.get('final_val_accuracy', 'N/A'):.2f}%")
-            print(f"   📉 Best Loss: {summary.get('best_val_loss', 'N/A'):.4f}")
-            print(f"   🔄 Epochs: {summary.get('total_epochs', 'N/A')}")
-            print(f"   🧠 Parameters: {summary.get('model_parameters', 'N/A'):,}")
+            print(f" | 📅 {summary.get('timestamp', 'N/A')[:19]}")  # Truncate timestamp
+            print(f"{'':<{name_width+3}} 🎯 Final Accuracy: {summary.get('final_val_accuracy', 'N/A'):.2f}%")
+            print(f"{'':<{name_width+3}} 📉 Best Loss: {summary.get('best_val_loss', 'N/A'):.4f}")
+            print(f"{'':<{name_width+3}} 🔄 Epochs: {summary.get('total_epochs', 'N/A')}")
+            print(f"{'':<{name_width+3}} 🧠 Parameters: {summary.get('model_parameters', 'N/A'):,}")
         else:
-            print("   ⚠️  No summary found")
+            print(" | ⚠️  No summary found")
         
-        if exp['has_config']:
-            print("   ✅ Has configuration")
-        else:
-            print("   ❌ No configuration")
+        config_status = "✅ Has configuration" if exp['has_config'] else "❌ No configuration"
+        print(f"{'':<{name_width+3}} {config_status}")
     
     return experiments
 
@@ -179,14 +181,18 @@ def compare_experiments(exp_names=None):
         print("❌ No valid experiments found for comparison!")
         return
     
+    # Calculate column widths based on content
+    max_name_length = max(len(comp['name']) for comp in comparisons)
+    name_width = max(20, max_name_length + 2)  # Minimum 20, but expand if needed
+    
     # Create comparison table
     print("📊 EXPERIMENT COMPARISON:")
-    print("=" * 120)
+    print("=" * (name_width + 80))  # Adjust separator length
     
-    # Header
+    # Header with dynamic width
     headers = ["Experiment", "Val Acc", "Train Acc", "Gap", "Saturation", "Best Loss", "Epochs", "Model"]
-    print(f"{headers[0]:<20} {headers[1]:<8} {headers[2]:<9} {headers[3]:<6} {headers[4]:<12} {headers[5]:<12} {headers[6]:<8} {headers[7]}")
-    print("-" * 120)
+    print(f"{headers[0]:<{name_width}} {headers[1]:<8} {headers[2]:<9} {headers[3]:<6} {headers[4]:<12} {headers[5]:<12} {headers[6]:<8} {headers[7]}")
+    print("-" * (name_width + 80))  # Adjust separator length
     
     for comp in comparisons:
         summary = comp['summary']
@@ -209,7 +215,7 @@ def compare_experiments(exp_names=None):
         else:
             saturation_status = "🟢 LOW"
         
-        print(f"{comp['name']:<20} "
+        print(f"{comp['name']:<{name_width}} "
               f"{summary.get('final_val_accuracy', 0):<8.2f} "
               f"{saturation.get('final_train_accuracy', 0):<9.2f} "
               f"{gap:<6.1f} "

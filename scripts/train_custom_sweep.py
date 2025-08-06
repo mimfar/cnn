@@ -14,9 +14,9 @@ from training.trainers.base_trainer import main as train_model
 
 
 def main():
-    dropout_rates = [0.25, 0.35, 0.5]
+    dropout_rates = [0.25, 0.5]
     learning_rates = 0.001
-    batch_sizes = [32,64,128]
+    batch_sizes = [64]
     num_epochs = 12
 
     for dropout_rate in dropout_rates:

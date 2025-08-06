@@ -12,38 +12,10 @@ import matplotlib.pyplot as plt
 import pandas as pd
 from datetime import datetime
 import json
-import time
-import psutil
-import gc
 # Add the project root to Python path
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
 from models.base_cnn import BaseCNN
-
-
-def get_memory_usage():
-    """
-    Get current system memory usage information including cache and swap
-    """
-    memory = psutil.virtual_memory()
-    swap = psutil.swap_memory()
-    
-    # Calculate memory pressure indicators
-    memory_pressure = (memory.used / memory.total) * 100
-    swap_pressure = (swap.used / swap.total) * 100 if swap.total > 0 else 0
-    
-    return {
-        'total_gb': memory.total / (1024**3),
-        'available_gb': memory.available / (1024**3),
-        'used_gb': memory.used / (1024**3),
-        'percent_used': memory.percent,
-        'swap_total_gb': swap.total / (1024**3),
-        'swap_used_gb': swap.used / (1024**3),
-        'swap_free_gb': swap.free / (1024**3),
-        'swap_percent_used': swap.percent,
-        'memory_pressure': memory_pressure,
-        'swap_pressure': swap_pressure
-    }
 
 
 def create_experiment_directory(experiment_name=None):
@@ -98,12 +70,11 @@ def get_model_info(model):
     return model_info
 
 
-def train_model(model, train_loader, val_loader, optimizer, scheduler, experiment_dir, num_epochs=10, patience=3, min_delta=0.005):
+def train_model(model, train_loader, val_loader, optimizer, scheduler, experiment_dir, num_epochs=10, patience=2, min_delta=0.005):
     """
     Basic training function with validation and early stopping
     """
     device = torch.device("cuda" if torch.cuda.is_available() else "mps")
-    # model = model.to(device)
     
     # Loss function
     criterion = nn.CrossEntropyLoss()
@@ -127,10 +98,8 @@ def train_model(model, train_loader, val_loader, optimizer, scheduler, experimen
         train_loss = 0.0
         train_correct = 0
         train_total = 0
-        start_time = time.time()
         
         for batch_idx, (data, targets) in enumerate(train_loader):
-
             data, targets = data.to(device), targets.to(device)
             
             # Forward pass
@@ -151,8 +120,7 @@ def train_model(model, train_loader, val_loader, optimizer, scheduler, experimen
             if batch_idx % 100 == 0:
                 print(f'Epoch [{epoch+1}/{num_epochs}], Batch [{batch_idx}/{len(train_loader)}], '
                       f'Loss: {loss.item():.4f}')
-        train_time = time.time() - start_time
-        print(f'Training time: {train_time:.2f} seconds')
+        
         # Calculate training metrics
         avg_train_loss = train_loss / len(train_loader)
         train_accuracy = 100 * train_correct / train_total
@@ -162,7 +130,7 @@ def train_model(model, train_loader, val_loader, optimizer, scheduler, experimen
         val_loss = 0.0
         val_correct = 0
         val_total = 0
-        start_time = time.time()
+        
         with torch.no_grad():
             for data, targets in val_loader:
                 data, targets = data.to(device), targets.to(device)
@@ -177,9 +145,8 @@ def train_model(model, train_loader, val_loader, optimizer, scheduler, experimen
         # Calculate validation metrics
         avg_val_loss = val_loss / len(val_loader)
         val_accuracy = 100 * val_correct / val_total
-        val_time = time.time() - start_time
-        print(f'Validation time: {val_time:.2f} seconds')
-        # Step the scheduler (this was missing!)
+        
+        # Step the scheduler 
         scheduler.step()
         
         # Store metrics
@@ -219,22 +186,6 @@ def train_model(model, train_loader, val_loader, optimizer, scheduler, experimen
         print(f'Epoch [{epoch+1}/{num_epochs}] - Train Loss: {avg_train_loss:.4f}, '
               f'Train Acc: {train_accuracy:.2f}%, Val Loss: {avg_val_loss:.4f}, '
               f'Val Acc: {val_accuracy:.2f}%, LR: {current_lr:.6f}')
-        
-        # Monitor system memory usage
-        memory_info = get_memory_usage()
-        print(f'💾 Memory Usage - Used: {memory_info["used_gb"]:.2f}GB / {memory_info["total_gb"]:.2f}GB '
-              f'({memory_info["percent_used"]:.1f}%) | Available: {memory_info["available_gb"]:.2f}GB')
-        print(f'   💿 Swap: {memory_info["swap_used_gb"]:.2f}GB / {memory_info["swap_total_gb"]:.2f}GB '
-              f'({memory_info["swap_percent_used"]:.1f}%)')
-        
-        # Memory pressure warnings
-        if memory_info["swap_pressure"] > 10:
-            print(f'⚠️  WARNING: High swap usage detected ({memory_info["swap_pressure"]:.1f}%) - Consider reducing batch size or workers')
-        if memory_info["memory_pressure"] > 85:
-            print(f'⚠️  WARNING: High memory pressure ({memory_info["memory_pressure"]:.1f}%) - System may slow down')
-        
-        # Force garbage collection to free memory
-        gc.collect()
         
         # Check early stopping
         if patience_counter >= patience:
@@ -373,13 +324,14 @@ def plot_training_history(history, experiment_dir):
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     plot_path = f"{experiment_dir}/plots/training_history_{timestamp}.png"
     plt.savefig(plot_path, dpi=300, bbox_inches='tight')
-    plt.show()
+    # plt.show()
+    # plt.close()
     
     print(f"Training plots saved to {plot_path}")
 
 
 #%%
-def main(experiment_name=None, num_epochs=12, learning_rate=0.001, batch_size=64,dropout_rate=0.5):
+def main(experiment_name=None, num_epochs=12, learning_rate=0.001, batch_size=128,dropout_rate=0.5, patience=2):
     """
     Main function to set up data and train the model
     """
@@ -392,12 +344,12 @@ def main(experiment_name=None, num_epochs=12, learning_rate=0.001, batch_size=64
         transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))
     ])
 
-        # Load CIFAR-10 dataset
+    # Load CIFAR-10 dataset
     # Use absolute path to ensure data is loaded from the correct location
     data_root = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), 'data')
-    train_dataset = datasets.CIFAR10(root=data_root, train=True,
+    train_dataset = datasets.CIFAR10(root=data_root, train=True, 
                                     download=True, transform=transform)
-    val_dataset = datasets.CIFAR10(root=data_root, train=False,
+    val_dataset = datasets.CIFAR10(root=data_root, train=False, 
                                     download=True, transform=transform)
 
     # Create data loaders with optimization
@@ -418,9 +370,8 @@ def main(experiment_name=None, num_epochs=12, learning_rate=0.001, batch_size=64
     print(f"📊 Model Info: {model_info['model_name']} with {model_info['total_parameters']:,} parameters")
     
     # Initialize optimizer and scheduler
-    optimizer = optim.Adam(model.parameters(), lr=learning_rate)
+    optimizer = optim.Adam(model.parameters(), lr=learning_rate, weight_decay=0.0001)
     scheduler = lr_scheduler.StepLR(optimizer, step_size=4, gamma=0.1)
-    
     # Create experiment configuration
     config = {
         'experiment_name': experiment_name or f"experiment_{datetime.now().strftime('%Y%m%d_%H%M%S')}",
@@ -434,7 +385,7 @@ def main(experiment_name=None, num_epochs=12, learning_rate=0.001, batch_size=64
             'scheduler': 'StepLR',
             'step_size': 4,
             'gamma': 0.1,
-            'patience': 3,
+            'patience': patience,
             'min_delta': 0.005
         },
         'data': {
@@ -450,7 +401,7 @@ def main(experiment_name=None, num_epochs=12, learning_rate=0.001, batch_size=64
     save_experiment_config(experiment_dir, config)
     
     # Train the model
-    history = train_model(model, train_loader, val_loader, optimizer, scheduler, experiment_dir, num_epochs=num_epochs)
+    history = train_model(model, train_loader, val_loader, optimizer, scheduler, experiment_dir, num_epochs=num_epochs, patience=patience)
 
     print("Training completed!")
     print(f"Final validation accuracy: {history['final_val_accuracy']:.2f}%")
@@ -466,7 +417,7 @@ def main(experiment_name=None, num_epochs=12, learning_rate=0.001, batch_size=64
     print(f"📊 Training history saved to: {history_file}")
     
     # Create visualizations
-    # plot_training_history(history, experiment_dir)
+    plot_training_history(history, experiment_dir)
     
     # Save experiment summary
     summary = {
@@ -488,6 +439,6 @@ def main(experiment_name=None, num_epochs=12, learning_rate=0.001, batch_size=64
 
 if __name__ == "__main__":
     # You can specify an experiment name or let it auto-generate
-    main("baseline_memory_usage_1")  # With custom name
+    main("baseline_weight_decay_bs_128")  # With custom name
     # main()  # Auto-generate name with timestamp
 # %%

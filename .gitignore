@@ -111,3 +111,4 @@ training/checkpoints/
 .env.development.local
 .env.test.local
 .env.production.local 
+scripts/experiment_manager.py
