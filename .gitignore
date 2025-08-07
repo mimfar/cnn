@@ -35,10 +35,7 @@ venv.bak/
 *.pickle
 
 # Experiment Outputs
-experiments/*/checkpoints/
-experiments/*/plots/
-experiments/*/logs/
-experiments/experiment_comparison/
+experiments/
 
 # Data Files
 data/
@@ -112,3 +109,4 @@ training/checkpoints/
 .env.test.local
 .env.production.local 
 scripts/experiment_manager.py
+scripts/pg.py

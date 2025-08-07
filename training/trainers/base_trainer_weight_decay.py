@@ -331,7 +331,7 @@ def plot_training_history(history, experiment_dir):
 
 
 #%%
-def main(experiment_name=None, num_epochs=12, learning_rate=0.001, batch_size=128,dropout_rate=0.5, patience=2):
+def main(experiment_name=None, num_epochs=12, learning_rate=0.001, batch_size=128, dropout_rate=0.5, weight_decay=0.0001, patience=2):
     """
     Main function to set up data and train the model
     """
@@ -370,7 +370,7 @@ def main(experiment_name=None, num_epochs=12, learning_rate=0.001, batch_size=12
     print(f"📊 Model Info: {model_info['model_name']} with {model_info['total_parameters']:,} parameters")
     
     # Initialize optimizer and scheduler
-    optimizer = optim.Adam(model.parameters(), lr=learning_rate, weight_decay=0.0001)
+    optimizer = optim.Adam(model.parameters(), lr=learning_rate, weight_decay=weight_decay)
     scheduler = lr_scheduler.StepLR(optimizer, step_size=4, gamma=0.1)
     # Create experiment configuration
     config = {
@@ -381,6 +381,8 @@ def main(experiment_name=None, num_epochs=12, learning_rate=0.001, batch_size=12
             'batch_size': batch_size,
             'num_epochs': num_epochs,
             'learning_rate': learning_rate,
+            'dropout_rate': dropout_rate,
+            'weight_decay': weight_decay,
             'optimizer': 'Adam',
             'scheduler': 'StepLR',
             'step_size': 4,
@@ -439,6 +441,6 @@ def main(experiment_name=None, num_epochs=12, learning_rate=0.001, batch_size=12
 
 if __name__ == "__main__":
     # You can specify an experiment name or let it auto-generate
-    main("baseline_weight_decay_bs_128")  # With custom name
+    main("baseline_weight_decay_test")  # With custom name
     # main()  # Auto-generate name with timestamp
 # %%
