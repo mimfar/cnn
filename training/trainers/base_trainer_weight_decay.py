@@ -338,8 +338,18 @@ def main(experiment_name=None, num_epochs=12, learning_rate=0.001, batch_size=12
     # Create experiment directory
     experiment_dir = create_experiment_directory(experiment_name)
     
-    # Basic transforms
-    transform = transforms.Compose([
+    # Data augmentation for training
+    train_transform = transforms.Compose([
+        transforms.RandomHorizontalFlip(p=0.5),
+        transforms.RandomRotation(degrees=10),
+        transforms.RandomCrop(size=32, padding=4),
+        transforms.ColorJitter(brightness=0.2, contrast=0.2, saturation=0.2, hue=0.1),
+        transforms.ToTensor(),
+        transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))
+    ])
+    
+    # Clean transforms for validation (no augmentation)
+    val_transform = transforms.Compose([
         transforms.ToTensor(),
         transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))
     ])
@@ -348,9 +358,9 @@ def main(experiment_name=None, num_epochs=12, learning_rate=0.001, batch_size=12
     # Use absolute path to ensure data is loaded from the correct location
     data_root = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), 'data')
     train_dataset = datasets.CIFAR10(root=data_root, train=True, 
-                                    download=True, transform=transform)
+                                    download=True, transform=train_transform)
     val_dataset = datasets.CIFAR10(root=data_root, train=False, 
-                                    download=True, transform=transform)
+                                    download=True, transform=val_transform)
 
     # Create data loaders with optimization
     train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, 
@@ -394,7 +404,14 @@ def main(experiment_name=None, num_epochs=12, learning_rate=0.001, batch_size=12
             'dataset': 'CIFAR-10',
             'train_size': len(train_dataset),
             'val_size': len(val_dataset),
-            'transform': 'basic_normalization'
+            'train_transform': 'data_augmentation',
+            'val_transform': 'basic_normalization',
+            'augmentation': {
+                'random_horizontal_flip': True,
+                'random_rotation': 10,
+                'random_crop': {'size': 32, 'padding': 4},
+                'color_jitter': {'brightness': 0.2, 'contrast': 0.2, 'saturation': 0.2, 'hue': 0.1}
+            }
         },
         'device': str(device)
     }
