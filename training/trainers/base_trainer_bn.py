@@ -15,6 +15,7 @@ import json
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
 from models.base_cnn_bn import BaseCNNBN
+from models.deep_cnn_bn import DeepCNNBN
 
 
 def create_experiment_directory(experiment_name=None):
@@ -237,7 +238,7 @@ def plot_training_history(history, experiment_dir):
     print(f"📈 Training curves saved to: {plot_file}")
 
 
-def main(experiment_name=None, num_epochs=12, learning_rate=0.001, batch_size=128, dropout_rate=0.5, weight_decay=0.0001, patience=2):
+def main(model_type="BaseCNNBN", experiment_name=None, num_epochs=12, learning_rate=0.001, batch_size=128, dropout_rate=0.5, weight_decay=0.0001, patience=2):
     """
     Main function to set up data and train the model
     """
@@ -273,7 +274,12 @@ def main(experiment_name=None, num_epochs=12, learning_rate=0.001, batch_size=12
                            num_workers=4, pin_memory=False)
 
     # Initialize model
-    model = BaseCNNBN(num_classes=10, input_channels=3, dropout_rate=dropout_rate)
+    if model_type == "BaseCNNBN":
+        model = BaseCNNBN(num_classes=10, input_channels=3, dropout_rate=dropout_rate)
+    elif model_type == "DeepCNNBN":
+        model = DeepCNNBN(num_classes=10, input_channels=3, dropout_rate=dropout_rate)
+    else:
+        raise ValueError(f"Unknown model type: {model_type}")
     # Ensure model is on the correct device first
     device = torch.device("cuda" if torch.cuda.is_available() else "mps")
     print(f"Training on device: {device}")
@@ -359,6 +365,7 @@ def main(experiment_name=None, num_epochs=12, learning_rate=0.001, batch_size=12
     return history, experiment_dir
 
 if __name__ == "__main__":
-    # You can specify an experiment name or let it auto-generate
-    main("baseline_batchnorm_bs_64")  # With custom name
+    # You can specify model type and experiment name
+    main(model_type="DeepCNNBN", experiment_name="deep_cnn_bn_bs_64")  # Deep model
+    # main(model_type="BaseCNNBN", experiment_name="baseline_batchnorm_bs_64")  # Base model
     # main()  # Auto-generate name with timestamp
