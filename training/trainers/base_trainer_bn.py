@@ -245,12 +245,15 @@ def main(model_type="BaseCNNBN", experiment_name=None, num_epochs=12, learning_r
     # Create experiment directory
     experiment_dir = create_experiment_directory(experiment_name)
     
-    # Data augmentation for training
+    # Enhanced data augmentation for training
     train_transform = transforms.Compose([
+        transforms.RandomCrop(32, padding=4),  # Crop with padding for spatial variation
         transforms.RandomHorizontalFlip(p=0.5),
-        transforms.RandomRotation(degrees=10),
+        transforms.RandomRotation(degrees=10),  # Slightly increased rotation
+        transforms.ColorJitter(brightness=0.2, contrast=0.2, saturation=0.2, hue=0.1),  # Careful color augmentation
         transforms.ToTensor(),
-        transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))
+        transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5)),
+        transforms.RandomErasing(p=0.1, scale=(0.02, 0.33), ratio=(0.3, 3.3), value=0, inplace=False)  # Random erasing
     ])
     
     # Clean transforms for validation (no augmentation)
@@ -317,8 +320,11 @@ def main(model_type="BaseCNNBN", experiment_name=None, num_epochs=12, learning_r
             'train_transform': 'data_augmentation',
             'val_transform': 'basic_normalization',
             'augmentation': {
+                'random_crop': {'size': 32, 'padding': 4},
                 'random_horizontal_flip': True,
-                'random_rotation': 10
+                'random_rotation': 15,
+                'color_jitter': {'brightness': 0.2, 'contrast': 0.2, 'saturation': 0.2, 'hue': 0.1},
+                'random_erasing': {'p': 0.1, 'scale': [0.02, 0.33], 'ratio': [0.3, 3.3]}
             }
         },
         'device': str(device)
@@ -366,6 +372,6 @@ def main(model_type="BaseCNNBN", experiment_name=None, num_epochs=12, learning_r
 
 if __name__ == "__main__":
     # You can specify model type and experiment name
-    main(model_type="DeepCNNBN", experiment_name="deep_cnn_bn_bs_64")  # Deep model
+    main(model_type="DeepCNNBN", experiment_name="deep_cnn_enhanced_aug")  # Deep model with enhanced augmentation
     # main(model_type="BaseCNNBN", experiment_name="baseline_batchnorm_bs_64")  # Base model
     # main()  # Auto-generate name with timestamp
