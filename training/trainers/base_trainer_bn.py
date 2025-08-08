@@ -129,6 +129,8 @@ def train_model(model, train_loader, val_loader, optimizer, scheduler, experimen
             # Backward pass and optimization
             loss.backward()
             optimizer.step()
+            # OneCycleLR: step per batch
+            scheduler.step()
             
             # Statistics
             train_loss += loss.item()
@@ -161,9 +163,6 @@ def train_model(model, train_loader, val_loader, optimizer, scheduler, experimen
         val_loss = val_loss / len(val_loader)
         train_accuracy = 100. * train_correct / train_total
         val_accuracy = 100. * val_correct / val_total
-        
-        # CosineAnnealingLR: step per epoch
-        scheduler.step()
         
         # Update learning rate (after last batch step, just read current value)
         current_lr = optimizer.param_groups[0]['lr']
@@ -313,11 +312,16 @@ def main(model_type="BaseCNNBN", experiment_name=None, num_epochs=12, learning_r
     optimizer = optim.SGD(
         model.parameters(), lr=0.1, momentum=0.9, weight_decay=5e-4, nesterov=True
     )
-    # CosineAnnealingLR - smooth cosine decay over epochs
-    scheduler = lr_scheduler.CosineAnnealingLR(
+    # OneCycleLR over the full run; step scheduler per batch inside training loop
+    scheduler = lr_scheduler.OneCycleLR(
         optimizer,
-        T_max=num_epochs,
-        eta_min=1e-6
+        max_lr=0.1,
+        epochs=num_epochs,
+        steps_per_epoch=len(train_loader),
+        pct_start=0.2,
+        anneal_strategy="cos",
+        div_factor=25.0,
+        final_div_factor=1e4,
     )
     # Create experiment configuration
     config = {
@@ -333,10 +337,13 @@ def main(model_type="BaseCNNBN", experiment_name=None, num_epochs=12, learning_r
             'optimizer': 'SGD',
             'momentum': 0.9,
             'nesterov': True,
-            'scheduler': 'CosineAnnealingLR',
-            'cosine': {
-                'T_max': num_epochs,
-                'eta_min': 1e-6
+            'scheduler': 'OneCycleLR',
+            'onecycle': {
+                'max_lr': 0.1,
+                'pct_start': 0.2,
+                'anneal_strategy': 'cos',
+                'div_factor': 25.0,
+                'final_div_factor': 10000.0
             },
             'patience': patience,
             'min_delta': 0.005
@@ -397,6 +404,6 @@ def main(model_type="BaseCNNBN", experiment_name=None, num_epochs=12, learning_r
 
 if __name__ == "__main__":
     # You can specify model type and experiment name
-    main(model_type="DeepCNNBN", experiment_name="deep_cnn_sgd_cosine")  # Deep model with SGD + CosineAnnealingLR
+    main(model_type="DeepCNNBN", experiment_name="deep_cnn_sgd_onecycle")  # Deep model with SGD + OneCycleLR
     # main(model_type="BaseCNNBN", experiment_name="baseline_batchnorm_bs_64")  # Base model
     # main()  # Auto-generate name with timestamp
