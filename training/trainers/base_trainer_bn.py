@@ -112,6 +112,8 @@ def train_model(model, train_loader, val_loader, optimizer, scheduler, experimen
             # Backward pass and optimization
             loss.backward()
             optimizer.step()
+            # OneCycleLR: step per batch
+            scheduler.step()
             
             # Statistics
             train_loss += loss.item()
@@ -145,9 +147,8 @@ def train_model(model, train_loader, val_loader, optimizer, scheduler, experimen
         train_accuracy = 100. * train_correct / train_total
         val_accuracy = 100. * val_correct / val_total
         
-        # Update learning rate
+        # Update learning rate (after last batch step, just read current value)
         current_lr = optimizer.param_groups[0]['lr']
-        scheduler.step()
         
         # Save metrics
         train_losses.append(train_loss)
@@ -238,7 +239,7 @@ def plot_training_history(history, experiment_dir):
     print(f"📈 Training curves saved to: {plot_file}")
 
 
-def main(model_type="BaseCNNBN", experiment_name=None, num_epochs=12, learning_rate=0.001, batch_size=128, dropout_rate=0.5, weight_decay=0.0001, patience=2):
+def main(model_type="BaseCNNBN", experiment_name=None, num_epochs=12, learning_rate=0.001, batch_size=128, dropout_rate=0.5, weight_decay=0.0001, patience=4):
     """
     Main function to set up data and train the model
     """
@@ -290,8 +291,21 @@ def main(model_type="BaseCNNBN", experiment_name=None, num_epochs=12, learning_r
     print(f"📊 Model Info: {model_info['model_name']} with {model_info['total_parameters']:,} parameters")
     
     # Initialize optimizer and scheduler
-    optimizer = optim.SGD(model.parameters(), lr=0.01, momentum=0.9, weight_decay=weight_decay)
-    scheduler = lr_scheduler.StepLR(optimizer, step_size=4, gamma=0.1)
+    # SGD with Nesterov momentum tuned for CIFAR-10 style training
+    optimizer = optim.SGD(
+        model.parameters(), lr=0.1, momentum=0.9, weight_decay=5e-4, nesterov=True
+    )
+    # OneCycleLR over the full run; step scheduler per batch inside training loop
+    scheduler = lr_scheduler.OneCycleLR(
+        optimizer,
+        max_lr=0.1,
+        epochs=num_epochs,
+        steps_per_epoch=len(train_loader),
+        pct_start=0.2,
+        anneal_strategy="cos",
+        div_factor=25.0,
+        final_div_factor=1e4,
+    )
     # Create experiment configuration
     config = {
         'experiment_name': experiment_name or f"experiment_{datetime.now().strftime('%Y%m%d_%H%M%S')}",
@@ -300,14 +314,20 @@ def main(model_type="BaseCNNBN", experiment_name=None, num_epochs=12, learning_r
         'training': {
             'batch_size': batch_size,
             'num_epochs': num_epochs,
-            'learning_rate': 0.01,
+            'learning_rate': 0.1,
             'dropout_rate': dropout_rate,
-            'weight_decay': weight_decay,
+            'weight_decay': 5e-4,
             'optimizer': 'SGD',
             'momentum': 0.9,
-            'scheduler': 'StepLR',
-            'step_size': 4,
-            'gamma': 0.1,
+            'nesterov': True,
+            'scheduler': 'OneCycleLR',
+            'onecycle': {
+                'max_lr': 0.1,
+                'pct_start': 0.2,
+                'anneal_strategy': 'cos',
+                'div_factor': 25.0,
+                'final_div_factor': 10000.0
+            },
             'patience': patience,
             'min_delta': 0.005
         },
