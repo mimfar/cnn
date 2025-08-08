@@ -119,15 +119,12 @@ def train_model(model, train_loader, val_loader, optimizer, scheduler, experimen
         for inputs, labels in train_loader:
             inputs, labels = inputs.to(device), labels.to(device)
             
-            # Apply MixUp
-            inputs, targets_a, targets_b, lam = mixup_data(inputs, labels, alpha=0.2)
-            
             # Zero the gradients
             optimizer.zero_grad()
             
             # Forward pass
             outputs = model(inputs)
-            loss = mixup_criterion(criterion, outputs, targets_a, targets_b, lam)
+            loss = criterion(outputs, labels)
             
             # Backward pass and optimization
             loss.backward()
@@ -268,7 +265,6 @@ def main(model_type="BaseCNNBN", experiment_name=None, num_epochs=12, learning_r
     
     # Data augmentation for training
     train_transform = transforms.Compose([
-        transforms.RandomCrop(32, padding=4),  # Add spatial variation
         transforms.RandomHorizontalFlip(p=0.5),
         transforms.RandomRotation(degrees=10),
         transforms.ToTensor(),
@@ -314,12 +310,12 @@ def main(model_type="BaseCNNBN", experiment_name=None, num_epochs=12, learning_r
     # Initialize optimizer and scheduler
     # SGD with Nesterov momentum tuned for CIFAR-10 style training
     optimizer = optim.SGD(
-        model.parameters(), lr=0.06, momentum=0.9, weight_decay=5e-4, nesterov=True
+        model.parameters(), lr=0.1, momentum=0.9, weight_decay=5e-4, nesterov=True
     )
     # OneCycleLR over the full run; step scheduler per batch inside training loop
     scheduler = lr_scheduler.OneCycleLR(
         optimizer,
-        max_lr=0.06,
+        max_lr=0.1,
         epochs=num_epochs,
         steps_per_epoch=len(train_loader),
         pct_start=0.2,
@@ -335,7 +331,7 @@ def main(model_type="BaseCNNBN", experiment_name=None, num_epochs=12, learning_r
         'training': {
             'batch_size': batch_size,
             'num_epochs': num_epochs,
-            'learning_rate': 0.06,
+            'learning_rate': 0.1,
             'dropout_rate': dropout_rate,
             'weight_decay': 5e-4,
             'optimizer': 'SGD',
@@ -343,15 +339,11 @@ def main(model_type="BaseCNNBN", experiment_name=None, num_epochs=12, learning_r
             'nesterov': True,
             'scheduler': 'OneCycleLR',
             'onecycle': {
-                'max_lr': 0.06,
+                'max_lr': 0.1,
                 'pct_start': 0.2,
                 'anneal_strategy': 'cos',
                 'div_factor': 25.0,
                 'final_div_factor': 10000.0
-            },
-            'mixup': {
-                'alpha': 0.2,
-                'enabled': True
             },
             'patience': patience,
             'min_delta': 0.005
@@ -363,7 +355,6 @@ def main(model_type="BaseCNNBN", experiment_name=None, num_epochs=12, learning_r
             'train_transform': 'data_augmentation',
             'val_transform': 'basic_normalization',
             'augmentation': {
-                'random_crop': {'size': 32, 'padding': 4},
                 'random_horizontal_flip': True,
                 'random_rotation': 10
             }
@@ -413,6 +404,6 @@ def main(model_type="BaseCNNBN", experiment_name=None, num_epochs=12, learning_r
 
 if __name__ == "__main__":
     # You can specify model type and experiment name
-    main(model_type="DeepCNNBN", experiment_name="deep_cnn_sgd_mixup")  # Deep model with SGD + MixUp
+    main(model_type="DeepCNNBN", experiment_name="deep_cnn_sgd_clean")  # Deep model with clean SGD setup
     # main(model_type="BaseCNNBN", experiment_name="baseline_batchnorm_bs_64")  # Base model
     # main()  # Auto-generate name with timestamp
