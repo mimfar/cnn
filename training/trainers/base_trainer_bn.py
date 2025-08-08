@@ -77,7 +77,7 @@ def train_model(model, train_loader, val_loader, optimizer, scheduler, experimen
     device = torch.device("cuda" if torch.cuda.is_available() else "mps")
     
     # Loss function
-    criterion = nn.CrossEntropyLoss()
+    criterion = nn.CrossEntropyLoss(label_smoothing=0.1)
     # Training history
     train_losses = []
     val_losses = []
