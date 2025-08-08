@@ -290,7 +290,7 @@ def main(model_type="BaseCNNBN", experiment_name=None, num_epochs=12, learning_r
     print(f"📊 Model Info: {model_info['model_name']} with {model_info['total_parameters']:,} parameters")
     
     # Initialize optimizer and scheduler
-    optimizer = optim.Adam(model.parameters(), lr=learning_rate, weight_decay=weight_decay)
+    optimizer = optim.SGD(model.parameters(), lr=0.01, momentum=0.9, weight_decay=weight_decay)
     scheduler = lr_scheduler.StepLR(optimizer, step_size=4, gamma=0.1)
     # Create experiment configuration
     config = {
@@ -300,10 +300,11 @@ def main(model_type="BaseCNNBN", experiment_name=None, num_epochs=12, learning_r
         'training': {
             'batch_size': batch_size,
             'num_epochs': num_epochs,
-            'learning_rate': learning_rate,
+            'learning_rate': 0.01,
             'dropout_rate': dropout_rate,
             'weight_decay': weight_decay,
-            'optimizer': 'Adam',
+            'optimizer': 'SGD',
+            'momentum': 0.9,
             'scheduler': 'StepLR',
             'step_size': 4,
             'gamma': 0.1,
@@ -366,6 +367,6 @@ def main(model_type="BaseCNNBN", experiment_name=None, num_epochs=12, learning_r
 
 if __name__ == "__main__":
     # You can specify model type and experiment name
-    main(model_type="DeepCNNBN", experiment_name="deep_cnn_bn_bs_64")  # Deep model
+    main(model_type="DeepCNNBN", experiment_name="deep_cnn_sgd_momentum")  # Deep model with SGD
     # main(model_type="BaseCNNBN", experiment_name="baseline_batchnorm_bs_64")  # Base model
     # main()  # Auto-generate name with timestamp
