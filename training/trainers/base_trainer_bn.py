@@ -248,6 +248,7 @@ def main(model_type="BaseCNNBN", experiment_name=None, num_epochs=12, learning_r
     
     # Data augmentation for training
     train_transform = transforms.Compose([
+        transforms.RandomCrop(32, padding=4),  # Add spatial variation
         transforms.RandomHorizontalFlip(p=0.5),
         transforms.RandomRotation(degrees=10),
         transforms.ToTensor(),
@@ -338,6 +339,7 @@ def main(model_type="BaseCNNBN", experiment_name=None, num_epochs=12, learning_r
             'train_transform': 'data_augmentation',
             'val_transform': 'basic_normalization',
             'augmentation': {
+                'random_crop': {'size': 32, 'padding': 4},
                 'random_horizontal_flip': True,
                 'random_rotation': 10
             }
@@ -387,6 +389,6 @@ def main(model_type="BaseCNNBN", experiment_name=None, num_epochs=12, learning_r
 
 if __name__ == "__main__":
     # You can specify model type and experiment name
-    main(model_type="DeepCNNBN", experiment_name="deep_cnn_sgd_momentum")  # Deep model with SGD
+    main(model_type="DeepCNNBN", experiment_name="deep_cnn_sgd_randomcrop")  # Deep model with SGD + RandomCrop
     # main(model_type="BaseCNNBN", experiment_name="baseline_batchnorm_bs_64")  # Base model
     # main()  # Auto-generate name with timestamp
